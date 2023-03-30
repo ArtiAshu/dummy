@@ -1,0 +1,25 @@
+
+select * from [Log].[ExecutionLog]
+where cast(StartDateTime as date) = '2020-12-30'
+order by 1
+
+AVG RUN TIME ONLY AFTER 10 RUNS
+
+Clarification on the below
+		SELECT 
+			cmj.Schedule
+			, cmj.SpName
+			, cmj.Sequence
+			, RANK() OVER (PARTITION BY cmj.SpName ORDER BY cmj.Schedule, cmj.Sequence DESC) AS RowRank
+		FROM [App].[vwConfigMaintenanceJobs] cmj WITH (NOLOCK) 
+
+
+select top 5 * from [Log].[ExecutionLog]
+order by StartDateTime desc
+
+
+select * from [Log].[ExecutionLog]
+where 
+ExecutionLogID = 172247
+--cast(StartDateTime as date) = '2020-12-30'
+order by 1
