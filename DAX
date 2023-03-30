@@ -1,0 +1,104 @@
+SelectSystems = 
+IF (
+     VALUES ( SA_ODS_Data[PartnerSysAcro] )   IN VALUES ( AllAcroNames[PartnerSysAcro] ) || 
+     VALUES ( SA_ODS_Data[SysAcro] )        IN VALUES ( AllAcroNames[PartnerSysAcro]),
+    1
+)
+
+mSelectSysTitle = "Shows all System Interactions across portfolio and product lines for " & SELECTEDVALUE(AllAcroNames[PartnerSysAcro])
+
+AllAcroNames = DISTINCT(union(distinct(SA_ODS_Data[PartnerSysAcro]),distinct(SA_ODS_Data[SysAcro])))
+
+cProductLine = if([mPLSysCount]=0 || ISBLANK([mPLSysCount]) = TRUE(),PortfolioProductLine[ProductLine],"*"&PortfolioProductLine[ProductLine])
+
+mNoData = if([mPLSysCount]=0,"No fields data entered "&
+
+if( ISBLANK(SELECTEDVALUE(PortfolioProductLine[Portfolio])) = TRUE(),
+IF(ISBLANK(SELECTEDVALUE(PortfolioProductLine[ProductLine])) = TRUE(),"for this selection.","for "& SELECTEDVALUE(PortfolioProductLine[ProductLine])),
+IF(ISBLANK(SELECTEDVALUE(PortfolioProductLine[Portfolio])) = TRUE(),"for this selection.","for "& SELECTEDVALUE(PortfolioProductLine[Portfolio]))
+),"")
+
+mPLSysCount = CALCULATE(DISTINCTCOUNT(SA_ODS_Data[SysAcro]),GROUPBY(PortfolioProductLine,PortfolioProductLine[ProductLine]))
+
+mSelectAttribute = "System Interactions for " & SELECTEDVALUE(SA_ODS_Data[VAAttributeName])
+
+mSelectPL = if( ISBLANK(SELECTEDVALUE(PortfolioProductLine[ProductLine])) = TRUE(), "All Product Line System(s) to Interface Partner(s)" , SELECTEDVALUE(PortfolioProductLine[ProductLine]) & " System(s) to Interface Partner(s)")
+
+mSelectSys = SELECTEDVALUE(SA_ODS_Data[SysName]) &" System to Interface Partner(s)"
+
+mToMuchData = if([mPLSysCount]>30,"It appears there are far more System Interface data that can be displayed."& 
+if(ISBLANK(SELECTEDVALUE(PortfolioProductLine[ProductLine])) = TRUE(),
+" It is recommended to choose a Product Line for better visuals.",
+" You could try to expanding the visual by selecting the square box on the top right corner of this visual."
+),"")
+
+WeekNumberOfToday = WEEKNUM(today())
+
+AcroName = SA_ODS_Data[SysAcro] & " - " & SA_ODS_Data[SysName]
+
+cFieldFlag = IF(LEN(SA_ODS_Data[ExchangeField]) = 0,"No Field-level Data","With Field-level Data")
+
+DeDupeFlag = 
+VAR SysID = SA_ODS_Data[SysID]
+VAR partnerSysID = SA_ODS_Data[PartnerSysID]
+VAR reportname = SA_ODS_Data[InformationExchange]
+VAR fieldname = SA_ODS_Data[ExchangeField]
+VAR index = SA_ODS_Data[Index]
+RETURN
+
+CALCULATE(
+    DISTINCTCOUNT(SA_ODS_Data[Index]),
+        FILTER(
+            ALL( SA_ODS_Data),
+            SA_ODS_Data[SysID]=SysID
+            && SA_ODS_Data[PartnerSysID] = partnerSysID
+            && SA_ODS_Data[InformationExchange] = reportname
+            && SA_ODS_Data[ExchangeField] = fieldname
+            && SA_ODS_Data[Index] >= index
+        )
+    )
+
+
+HelpDocumentLink = "https://dvagov.sharepoint.com/sites/OITAMOSysDataFlowMapping/Shared%20Documents/VASI%20data%20mapping%20tool%20guide%20v1.1.pdf?CT=1649429349850&OR=Outlook-Body&CID=1C2A6DA2-D629-4696-9466-41848A8A16F8"
+
+mMsg1 = if(ISBLANK(SELECTEDVALUE(SA_ODS_Data[SysName])) = TRUE(), "For the above selected system, please choose both the With Field-level data and No Field-level data to view the details." , "")
+
+mPLMessage1 = IF(SELECTEDVALUE(SA_ODS_Data[cFieldFlag]) <> "With Field-level Data",".","Showing only system interactions where field-level metadata has been entered into VASI. (Existing system-to-system connections are not reflected here until field-level metadata are provided.)")
+
+CumulativeTotal = 
+CALCULATE (
+SUM(SharepointData[RowCnt]),
+FILTER (
+ALL( SharepointData[DateOfEntry] ),
+SharepointData[DateOfEntry] <= MAX ( SharepointData[DateOfEntry])
+)
+)
+
+AvailableSystems = calculate(DISTINCTCOUNT(VASISystems[SA_ODS_Data.SysID]),VASISystems[SA_ODS_Data.SysID] <> blank())
+
+CardInfo = if(ISBLANK(SELECTEDVALUE(VASISystems[Column])) = TRUE(), "Total Systems", "#Of " & SELECTEDVALUE(VASISystems[Column]))
+
+FlagSystems = 
+VAR _col1 = CALCULATETABLE(VALUES('VASISystems'[SA_ODS_Data.SysID]),LEN('VASISystems'[SA_ODS_Data.ExchangeField])>0, ALL('VASISystems'))
+VAR _result = 
+if(len(VASISystems[System Id]) = 4,
+	if(VASISystems[Product Line] <> "Not Accepted by PLM",
+		if (VASISystems[System Id] IN _col1, "Systems With Fields Data","Systems Without Fields Data")
+	,"Systems Not Accepted by PLM")
+,"External Systems")
+RETURN _result
+
+ReportCnt = 
+var _min =minx(filter('VASISystems',
+            [SA_ODS_Data.SysID] = EARLIER([SA_ODS_Data.SysID]) &&
+            [SA_ODS_Data.InformationExchange] = EARLIER([SA_ODS_Data.InformationExchange])),[Index])
+return
+if(len([SA_ODS_Data.InformationExchange])>0,if([Index] = _min , 1, 0),0)
+
+Selection = if( ISBLANK(SELECTEDVALUE(VASISystems[Column])) = TRUE(), "All Systems Data" , SELECTEDVALUE(VASISystems[Column]))
+
+SysIDName = VASISystems[System Id] & " - " & VASISystems[System Name]
+
+Table2Title = if(ISBLANK(SELECTEDVALUE(VASISystems[Column])) = TRUE(), "#OfSystems", "#Of" & SELECTEDVALUE(VASISystems[Column]))
+
+TableTitle = if(ISBLANK(SELECTEDVALUE(VASISystems[Column])) = TRUE(), "Showing Details of All Systems Data" & ": " & SELECTEDVALUE(VASISystems[IT Portfolio]), "Showing Details of " & SELECTEDVALUE(VASISystems[Column]))
