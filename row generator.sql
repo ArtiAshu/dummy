@@ -147,3 +147,73 @@ BEGIN
 END
 
 --truncate table dbo.s2
+
+
+Generate records Data
+drop table #Table1
+CREATE TABLE #Table1 (
+	id int PRIMARY KEY
+	,number int
+	,name nvarchar(10)
+	);
+
+	SET NOCOUNT ON
+	-- start point for adding rows
+	declare @rowsNumber int = 1000000
+
+	DECLARE @id INT = ISNULL((SELECT MAX(id) FROM #Table1)+1, 1)
+	DECLARE @iteration INT = 0
+	WHILE @iteration < @rowsNumber
+		BEGIN
+
+			--get a random int from 0 to 100
+			DECLARE @number INT = CAST(RAND()*100 AS INT)
+
+			-- generate random nvarchar
+			-- get a random nvarchar ascii char 65 to 128
+			DECLARE @name NVARCHAR(10) = N'' --empty string for start
+			DECLARE @length INT = CAST(RAND() * 10 AS INT) --random length of nvarchar
+			WHILE @length <> 0 --in loop we will randomize chars till the last one
+				BEGIN
+					SELECT @name = @name + CHAR(CAST(RAND() * 63 + 65 as INT))
+					SET @length = @length - 1 --next iteration
+				END
+
+			--insert data
+			INSERT INTO #Table1 (id, number, name)
+			VALUES (@id, @number, @name)
+			SET @iteration += 1
+			SET @id += 1
+		END
+	SET NOCOUNT OFF
+	select count(*) from #Table1
+	select top 10 * from #Table1
+
+
+--Change 1000000 to the number of your preference for your needs
+SELECT TOP 1000000
+      c1.[FirstName],
+	  c2.[LastName]
+ 
+  FROM [dbo].[DimCustomer] c1
+CROSS JOIN
+DimCustomer c2
+
+
+with randowvalues
+    as(
+       select 1 id, CAST(RAND(CHECKSUM(NEWID()))*100 as int) randomnumber
+	   --select 1 id, RAND(CHECKSUM(NEWID()))*100 randomnumber
+        union  all
+        select id + 1, CAST(RAND(CHECKSUM(NEWID()))*100 as int)  randomnumber
+		--select id + 1, RAND(CHECKSUM(NEWID()))*100  randomnumber
+        from randowvalues
+        where 
+          id < 1000
+      )
+ 
+ 
+ 
+    select *
+    from randowvalues
+    OPTION(MAXRECURSION 0)
